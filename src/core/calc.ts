@@ -1,148 +1,180 @@
-import type {
-  LedgerRow,
-  Metrics,
-  Settings,
-  Trade,
-} from './types'
+import type { LedgerRow, Metrics, Settings, Trade } from "./types";
 
 export function clampNumber(n: number, min: number, max: number): number {
-  if (min > max) {
-    return clampNumber(n, max, min)
-  }
-  if (n < min) return min
-  if (n > max) return max
-  return n
+  return Math.max(min, Math.min(max, n));
 }
 
-const roundTo2 = (value: number): number => Math.round(value * 100) / 100
-
-const safeDivide = (numerator: number, denominator: number): number => {
-  if (denominator === 0) return 0
-  return numerator / denominator
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
-const mean = (values: number[]): number => {
-  if (values.length === 0) return 0
-  const sum = values.reduce((acc, value) => acc + value, 0)
-  return sum / values.length
+function safeMean(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sum = values.reduce((acc, v) => acc + v, 0);
+  return sum / values.length;
 }
 
 export function riskAmount(
   balanceBefore: number,
-  trade: Trade,
-  settings: Settings,
+  trade: Pick<Trade, "riskType" | "riskValue">,
+  _settings: Settings
 ): number {
-  let amount = 0
-  if (trade.riskType === 'PERCENT') {
-    amount = balanceBefore * (trade.riskValue / 100)
+  const bal = Number.isFinite(balanceBefore) ? balanceBefore : 0;
+
+  let amt = 0;
+  if (trade.riskType === "PERCENT") {
+    amt = bal * (trade.riskValue / 100);
   } else {
-    amount = trade.riskValue
+    amt = trade.riskValue;
   }
 
-  const nonNegative = Math.max(0, amount)
-  return roundTo2(nonNegative)
+  if (!Number.isFinite(amt)) amt = 0;
+  amt = Math.max(0, amt);
+  return round2(amt);
+}
+
+function sortTrades(trades: Trade[]): Trade[] {
+  return [...trades].sort((a, b) => {
+    if (a.date < b.date) return -1;
+    if (a.date > b.date) return 1;
+    return a.createdAt - b.createdAt;
+  });
 }
 
 export function buildLedger(trades: Trade[], settings: Settings): LedgerRow[] {
-  const ordered = trades
-    .map((trade, index) => ({ trade, index }))
-    .sort((a, b) => {
-      if (a.trade.date === b.trade.date) return a.index - b.index
-      return a.trade.date < b.trade.date ? -1 : 1
-    })
+  const ordered = sortTrades(trades);
+  const rows: LedgerRow[] = [];
 
-  const ledger: LedgerRow[] = []
-  let balance = settings.startingBalance
+  let balance = settings.startingBalance;
 
-  for (let i = 0; i < ordered.length; i += 1) {
-    const { trade } = ordered[i]
-    const balanceBefore = balance
-    const risk = riskAmount(balanceBefore, trade, settings)
-    const pnl = risk * trade.rMultiple
-    const balanceAfter = balanceBefore + pnl
-    const returnBase =
-      settings.returnMode === 'ON_STARTING_BALANCE'
-        ? settings.startingBalance
-        : balanceBefore
-    const returnPct = safeDivide(pnl, returnBase) * 100
+  ordered.forEach((t, i) => {
+    const balanceBefore = balance;
+    const risk = riskAmount(balanceBefore, t, settings);
 
-    ledger.push({
+    // Se o usuário lançou em dinheiro:
+    // pnl é o próprio resultValue.
+    // rMultiple = pnl / risk
+    //
+    // Se lançou em R:
+    // rMultiple é o resultValue.
+    // pnl = risk * rMultiple
+    let pnl = 0;
+    let rMultiple = 0;
+
+    if (t.resultType === "MONEY") {
+      pnl = t.resultValue;
+      rMultiple = risk > 0 ? pnl / risk : 0;
+    } else {
+      rMultiple = t.resultValue;
+      pnl = risk * rMultiple;
+    }
+
+    if (!Number.isFinite(pnl)) pnl = 0;
+    if (!Number.isFinite(rMultiple)) rMultiple = 0;
+
+    pnl = round2(pnl);
+    rMultiple = round2(rMultiple);
+
+    const balanceAfter = round2(balanceBefore + pnl);
+
+    let returnPct = 0;
+    if (settings.returnMode === "ON_STARTING_BALANCE") {
+      returnPct =
+        settings.startingBalance !== 0
+          ? (pnl / settings.startingBalance) * 100
+          : 0;
+    } else {
+      returnPct = balanceBefore !== 0 ? (pnl / balanceBefore) * 100 : 0;
+    }
+    returnPct = round2(returnPct);
+
+    rows.push({
       index: i + 1,
-      tradeId: trade.id,
-      date: trade.date,
-      balanceBefore,
+      tradeId: t.id,
+      date: t.date,
+      balanceBefore: round2(balanceBefore),
       riskAmount: risk,
       pnl,
+      rMultiple,
       balanceAfter,
       returnPct,
-      rMultiple: trade.rMultiple,
-    })
+      symbol: t.symbol,
+    });
 
-    balance = balanceAfter
-  }
+    balance = balanceAfter;
+  });
 
-  return ledger
+  return rows;
 }
 
 export function calculateMetrics(
   trades: Trade[],
   ledger: LedgerRow[],
-  settings: Settings,
+  settings: Settings
 ): Metrics {
-  const wins = trades.filter((trade) => trade.rMultiple > 0)
-  const losses = trades.filter((trade) => trade.rMultiple < 0)
-  const bes = trades.filter((trade) => trade.rMultiple === 0)
+  const rAll = ledger.map((r) => r.rMultiple);
 
-  const winCount = wins.length
-  const lossCount = losses.length
-  const beCount = bes.length
-  const decisive = winCount + lossCount
+  const wins = rAll.filter((r) => r > 0);
+  const losses = rAll.filter((r) => r < 0);
+  const bes = rAll.filter((r) => r === 0);
 
-  const winRatePct = decisive === 0 ? 0 : (winCount / decisive) * 100
-  const avgWinR = mean(wins.map((trade) => trade.rMultiple))
-  const avgLossR = mean(losses.map((trade) => trade.rMultiple))
+  const totalWins = wins.length;
+  const totalLosses = losses.length;
+  const totalBE = bes.length;
 
-  const pWin = decisive === 0 ? 0 : winCount / decisive
-  const pLoss = decisive === 0 ? 0 : lossCount / decisive
-  const expectancyR = pWin * avgWinR + pLoss * avgLossR
+  // winrate considerando apenas wins+losses (BE fora do denominador)
+  const denom = totalWins + totalLosses;
+  const winRatePct = denom > 0 ? round2((totalWins / denom) * 100) : 0;
+
+  const avgWinR = round2(safeMean(wins));
+  const avgLossR = round2(safeMean(losses)); // negativo
+
+  const pWin = denom > 0 ? totalWins / denom : 0;
+  const pLoss = denom > 0 ? totalLosses / denom : 0;
+
+  const expectancyR = round2(pWin * avgWinR + pLoss * avgLossR);
 
   const lastBalance =
-    ledger.length === 0
-      ? settings.startingBalance
-      : ledger[ledger.length - 1].balanceAfter
-  const netPnl = lastBalance - settings.startingBalance
-  const netReturnPct = safeDivide(netPnl, settings.startingBalance) * 100
+    ledger.length > 0 ? ledger[ledger.length - 1].balanceAfter : settings.startingBalance;
 
-  const grossProfit = ledger
-    .filter((row) => row.pnl > 0)
-    .reduce((acc, row) => acc + row.pnl, 0)
-  const grossLossAbs = Math.abs(
-    ledger
-      .filter((row) => row.pnl < 0)
-      .reduce((acc, row) => acc + row.pnl, 0),
-  )
-  const profitFactor =
-    grossLossAbs === 0 ? Number.POSITIVE_INFINITY : grossProfit / grossLossAbs
+  const netPnl = round2(lastBalance - settings.startingBalance);
+  const netReturnPct =
+    settings.startingBalance !== 0
+      ? round2((netPnl / settings.startingBalance) * 100)
+      : 0;
 
-  let peak = settings.startingBalance
-  let maxDrawdownPct = 0
-  for (const row of ledger) {
-    if (row.balanceAfter > peak) {
-      peak = row.balanceAfter
-    }
-    if (peak > 0) {
-      const drawdownPct = ((row.balanceAfter - peak) / peak) * 100
-      if (drawdownPct < maxDrawdownPct) {
-        maxDrawdownPct = drawdownPct
-      }
-    }
+  const pnlPos = ledger.filter((r) => r.pnl > 0).reduce((acc, r) => acc + r.pnl, 0);
+  const pnlNeg = ledger.filter((r) => r.pnl < 0).reduce((acc, r) => acc + r.pnl, 0);
+
+  let profitFactor: number | null = null;
+  if (pnlNeg !== 0) {
+    profitFactor = round2(pnlPos / Math.abs(pnlNeg));
+  } else if (pnlPos > 0 && pnlNeg === 0) {
+    // só ganhos, sem perdas
+    profitFactor = null; // ou Infinity; prefiro null para não quebrar UI
   }
+
+  // Max drawdown (%) usando curva de saldo
+  // Retorna POSITIVO (ex: 12.5 significa -12.5% de DD)
+  let peak = settings.startingBalance;
+  let maxDd = 0;
+
+  ledger.forEach((row) => {
+    const bal = row.balanceAfter;
+    if (bal > peak) peak = bal;
+    if (peak > 0) {
+      const dd = ((peak - bal) / peak) * 100; // positivo
+      if (dd > maxDd) maxDd = dd;
+    }
+  });
+
+  const maxDrawdownPct = round2(maxDd);
 
   return {
     trades: trades.length,
-    totalWins: winCount,
-    totalLosses: lossCount,
-    totalBE: beCount,
+    totalWins,
+    totalLosses,
+    totalBE,
     winRatePct,
     avgWinR,
     avgLossR,
@@ -150,38 +182,35 @@ export function calculateMetrics(
     netPnl,
     netReturnPct,
     profitFactor,
-    maxDrawdownPct: Math.abs(maxDrawdownPct),
-  }
+    maxDrawdownPct,
+  };
 }
 
 export function groupTradesByDay(trades: Trade[]): Map<string, Trade[]> {
-  const grouped = new Map<string, Trade[]>()
-  for (const trade of trades) {
-    const date = trade.date
-    const bucket = grouped.get(date)
-    if (bucket) {
-      bucket.push(trade)
-    } else {
-      grouped.set(date, [trade])
-    }
-  }
-  return grouped
+  const map = new Map<string, Trade[]>();
+  trades.forEach((t) => {
+    const key = t.date;
+    const arr = map.get(key) ?? [];
+    arr.push(t);
+    map.set(key, arr);
+  });
+  return map;
 }
 
 export function validateDayRules(
   trades: Trade[],
-  settings: Settings,
+  settings: Settings
 ): { ok: boolean; warnings: string[] } {
-  const warnings: string[] = []
-  const grouped = groupTradesByDay(trades)
+  const warnings: string[] = [];
+  const byDay = groupTradesByDay(trades);
 
-  for (const [date, dayTrades] of grouped.entries()) {
-    if (dayTrades.length > settings.maxTradesPerDay) {
+  byDay.forEach((arr, date) => {
+    if (arr.length > settings.maxTradesPerDay) {
       warnings.push(
-        `Dia ${date} excede o maximo de ${settings.maxTradesPerDay} trades (${dayTrades.length}).`,
-      )
+        `Dia ${date}: ${arr.length} trades (limite configurado: ${settings.maxTradesPerDay}).`
+      );
     }
-  }
+  });
 
-  return { ok: warnings.length === 0, warnings }
+  return { ok: warnings.length === 0, warnings };
 }
