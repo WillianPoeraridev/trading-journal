@@ -1,78 +1,95 @@
-export type RiskType = 'PERCENT' | 'FIXED'
-export type ReturnMode = 'ON_STARTING_BALANCE' | 'ON_PREV_BALANCE'
-export type ProjectionMethod = 'DETERMINISTIC' | 'MONTE_CARLO'
+export type RiskType = "PERCENT" | "FIXED";
+export type ReturnMode = "ON_STARTING_BALANCE" | "ON_PREV_BALANCE";
+export type ResultType = "MONEY" | "R";
 
-export interface Settings {
-  startingBalance: number
-  currency: string
-  defaultRiskType: RiskType
-  defaultRiskValue: number
-  dailyStopR: number
-  dailyTakeR: number
-  maxTradesPerDay: number
-  returnMode: ReturnMode
-}
+export type Settings = {
+  startingBalance: number;
+  currency: string;
 
-export interface Trade {
-  id: string
-  date: string
-  symbol?: string
-  notes?: string
-  riskType: RiskType
-  riskValue: number
-  rMultiple: number
-}
+  defaultRiskType: RiskType;
+  defaultRiskValue: number;
 
-export interface LedgerRow {
-  index: number
-  tradeId: string
-  date: string
-  balanceBefore: number
-  riskAmount: number
-  pnl: number
-  balanceAfter: number
-  returnPct: number
-  rMultiple: number
-}
+  dailyStopR: number; // ex: -1
+  dailyTakeR: number; // ex: +2
+  maxTradesPerDay: number; // 1 padrão, 2 exceção
+  returnMode: ReturnMode;
+};
 
-export interface Metrics {
-  trades: number
-  totalWins: number
-  totalLosses: number
-  totalBE: number
-  winRatePct: number
-  avgWinR: number
-  avgLossR: number
-  expectancyR: number
-  netPnl: number
-  netReturnPct: number
-  profitFactor: number
-  maxDrawdownPct: number
-}
+export type Trade = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  symbol?: string;
+  notes?: string;
 
-export interface ProjectionSettings {
-  horizonDays: number
-  simulations: number
-  method: ProjectionMethod
-}
+  // risco (pode ser override do default)
+  riskType: RiskType;
+  riskValue: number;
 
-export interface MonteCarloBands {
-  p10: number[]
-  p50: number[]
-  p90: number[]
-}
+  // resultado lançado pelo usuário (em $ ou em R)
+  resultType: ResultType;
+  resultValue: number; // se MONEY: pnl em $ (pode ser negativo). se R: múltiplo de R
 
-export interface ProjectionResultSummary {
-  startBalance: number
-  endBalanceP50: number
-  endBalanceP10: number
-  endBalanceP90: number
-}
+  createdAt: number; // timestamp para desempate na ordenação
+};
 
-export interface ProjectionResult {
-  method: ProjectionMethod
-  horizonDays: number
-  deterministicPath?: number[]
-  monteCarlo?: MonteCarloBands
-  summary: ProjectionResultSummary
-}
+export type LedgerRow = {
+  index: number; // 1..n
+  tradeId: string;
+  date: string;
+
+  balanceBefore: number;
+  riskAmount: number;
+
+  pnl: number; // sempre em $
+  rMultiple: number; // sempre em R
+
+  balanceAfter: number;
+  returnPct: number;
+
+  symbol?: string;
+};
+
+export type Metrics = {
+  trades: number;
+  totalWins: number;
+  totalLosses: number;
+  totalBE: number;
+
+  winRatePct: number;
+
+  avgWinR: number;
+  avgLossR: number; // negativo
+  expectancyR: number;
+
+  netPnl: number;
+  netReturnPct: number;
+
+  profitFactor: number | null;
+  maxDrawdownPct: number;
+};
+
+export type ProjectionSettings = {
+  horizonDays: number;
+  simulations: number;
+  method: "DETERMINISTIC" | "MONTE_CARLO";
+};
+
+export type ProjectionResult = {
+  method: ProjectionSettings["method"];
+  horizonDays: number;
+
+  deterministicPath?: number[];
+
+  monteCarlo?: {
+    p10: number[];
+    p50: number[];
+    p90: number[];
+  };
+
+  summary: {
+    startBalance: number;
+    endBalanceP50: number;
+    endBalanceP10: number;
+    endBalanceP90: number;
+  };
+};
