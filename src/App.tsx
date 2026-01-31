@@ -3,7 +3,7 @@ import MetricsPanel from './components/MetricsPanel'
 import SettingsForm from './components/SettingsForm'
 import TradeForm from './components/TradeForm'
 import TradesTable from './components/TradesTable'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ProjectionSettings, Settings, Trade } from './core/types'
 import { calculateMetrics, buildLedger } from './core/calc'
 import { project } from './core/projection'
@@ -48,12 +48,12 @@ function App() {
   }
 
   const handleAddTrade = (trade: Trade) => {
-    setTrades((prev) => {
-      const next = [...prev, trade]
-      saveTrades(next)
-      return next
-    })
+    setTrades((prev) => [...prev, trade])
   }
+
+  useEffect(() => {
+    saveTrades(trades)
+  }, [trades])
 
   return (
     <div className="app">
