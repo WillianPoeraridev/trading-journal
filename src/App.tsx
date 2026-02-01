@@ -51,6 +51,10 @@ function App() {
     setTrades((prev) => [...prev, trade])
   }
 
+  const handleDeleteTrade = (tradeId: string) => {
+    setTrades((prev) => prev.filter((trade) => trade.id !== tradeId))
+  }
+
   useEffect(() => {
     saveTrades(trades)
   }, [trades])
@@ -75,7 +79,11 @@ function App() {
         </section>
 
         <section className="app__panel">
-          <TradesTable ledger={ledger} />
+          <TradesTable
+            ledger={ledger}
+            currency={settings.currency}
+            onDeleteTrade={handleDeleteTrade}
+          />
         </section>
       </main>
     </div>
