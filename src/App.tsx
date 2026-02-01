@@ -6,7 +6,13 @@ import TradesTable from './components/TradesTable'
 import DailyPanel from './components/DailyPanel'
 import { useEffect, useMemo, useState } from 'react'
 import type { ProjectionSettings, Settings, Trade } from './core/types'
-import { calculateMetrics, buildLedger } from './core/calc'
+import {
+  calculateMetrics,
+  buildLedger,
+  filterTradesByPeriod,
+  getMaxTradeDate,
+} from './core/calc'
+import { formatDateBR } from './core/format'
 import { project, projectDailySim } from './core/projection'
 import {
   loadSettings,
@@ -31,6 +37,7 @@ function App() {
     maxTradesPerDay: 1,
     returnMode: 'ON_STARTING_BALANCE',
     projectionMethod: 'DETERMINISTIC',
+    periodFilter: { preset: 'ALL' },
   }
 
   const [settings, setSettings] = useState<Settings>(() => ({
@@ -46,6 +53,12 @@ function App() {
     return trades.filter((trade) => trade.account === viewAccount)
   }, [trades, viewAccount])
 
+  const periodFilter = settings.periodFilter ?? { preset: 'ALL' }
+  const filteredTrades = useMemo(
+    () => filterTradesByPeriod(visibleTrades, periodFilter),
+    [visibleTrades, periodFilter],
+  )
+
   const effectiveSettings = useMemo(
     () => ({
       ...settings,
@@ -56,8 +69,8 @@ function App() {
   )
 
   const ledger = useMemo(
-    () => buildLedger(visibleTrades, effectiveSettings),
-    [visibleTrades, effectiveSettings],
+    () => buildLedger(filteredTrades, effectiveSettings),
+    [filteredTrades, effectiveSettings],
   )
   const daily = useMemo(
     () => summarizeByDay(ledger, effectiveSettings),
@@ -71,8 +84,8 @@ function App() {
     [ledger, effectiveSettings.startingBalance],
   )
   const metrics = useMemo(
-    () => calculateMetrics(visibleTrades, ledger, effectiveSettings),
-    [visibleTrades, ledger, effectiveSettings],
+    () => calculateMetrics(filteredTrades, ledger, effectiveSettings),
+    [filteredTrades, ledger, effectiveSettings],
   )
 
   const projectionSettings: ProjectionSettings = {
@@ -90,14 +103,43 @@ function App() {
         metrics,
       })
     }
-    return project(visibleTrades, effectiveSettings, projectionSettings)
+    return project(filteredTrades, effectiveSettings, projectionSettings)
   }, [
-    visibleTrades,
+    filteredTrades,
     effectiveSettings,
     projectionSettings.horizonDays,
     metrics,
     currentBalance,
   ])
+
+  const periodLabel = useMemo(() => {
+    const preset = periodFilter.preset
+    if (preset === 'ALL') return 'Mostrando: tudo'
+    if (preset === 'LAST_7_DAYS' || preset === 'LAST_30_DAYS') {
+      const base = getMaxTradeDate(visibleTrades)
+      if (!base) return 'Mostrando: 0 trades'
+      const days = preset === 'LAST_7_DAYS' ? 7 : 30
+      const baseParts = base.split('-').map((part) => Number(part))
+      const baseDate = new Date(baseParts[0], baseParts[1] - 1, baseParts[2])
+      const start = new Date(baseDate)
+      start.setDate(start.getDate() - (days - 1))
+      const startISO = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(
+        2,
+        '0',
+      )}-${String(start.getDate()).padStart(2, '0')}`
+      return `Mostrando: ${days} dias (${formatDateBR(startISO)} até ${formatDateBR(
+        base,
+      )})`
+    }
+    const start = periodFilter.start
+    const end = periodFilter.end
+    if (start && end) {
+      return `Mostrando: ${start} até ${end}`
+    }
+    if (start) return `Mostrando: a partir de ${start}`
+    if (end) return `Mostrando: até ${end}`
+    return 'Mostrando: intervalo'
+  }, [periodFilter, visibleTrades])
 
   const handleSettingsChange = (next: Settings) => {
     setSettings(next)
@@ -153,6 +195,7 @@ function App() {
           viewAccount={viewAccount}
           onClearAccountTrades={handleClearAccountTrades}
           onClearAllTrades={handleClearAllTrades}
+          periodLabel={periodLabel}
         />
       </header>
 

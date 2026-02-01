@@ -3,6 +3,8 @@ export type ReturnMode = "ON_STARTING_BALANCE" | "ON_PREV_BALANCE";
 export type ResultType = "MONEY" | "R";
 export type ProjectionMethod = "DETERMINISTIC" | "MONTE_CARLO" | "DAILY_SIM";
 export type TradeAccount = "REAL" | "BT";
+export type PeriodPreset = "ALL" | "LAST_7_DAYS" | "LAST_30_DAYS" | "RANGE";
+export type PeriodFilter = { preset: PeriodPreset; start?: string; end?: string };
 
 export type Settings = {
   startingBalance: number;
@@ -17,6 +19,7 @@ export type Settings = {
   returnMode: ReturnMode;
   projectionMethod: "DETERMINISTIC" | "DAILY_SIM";
   btStartingBalance: number;
+  periodFilter: PeriodFilter;
 };
 
 export type Trade = {

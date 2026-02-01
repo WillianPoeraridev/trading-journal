@@ -4,6 +4,55 @@ export function clampNumber(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
 
+const parseISODate = (dateISO: string): Date | null => {
+  const parts = dateISO.split("-").map((part) => Number(part));
+  if (parts.length !== 3) return null;
+  const [year, month, day] = parts;
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatISODate = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+export function getMaxTradeDate(trades: Trade[]): string | null {
+  if (trades.length === 0) return null;
+  return trades.reduce((max, trade) => (trade.date > max ? trade.date : max), trades[0].date);
+}
+
+export function filterTradesByPeriod(
+  trades: Trade[],
+  periodFilter: Settings["periodFilter"],
+): Trade[] {
+  const preset = periodFilter?.preset ?? "ALL";
+  if (preset === "ALL") return trades;
+
+  if (preset === "LAST_7_DAYS" || preset === "LAST_30_DAYS") {
+    const baseDate = getMaxTradeDate(trades);
+    if (!baseDate) return [];
+    const base = parseISODate(baseDate);
+    if (!base) return [];
+    const days = preset === "LAST_7_DAYS" ? 7 : 30;
+    const start = new Date(base);
+    start.setDate(start.getDate() - (days - 1));
+    const startISO = formatISODate(start);
+    return trades.filter((trade) => trade.date >= startISO && trade.date <= baseDate);
+  }
+
+  const start = periodFilter.start;
+  const end = periodFilter.end;
+  return trades.filter((trade) => {
+    if (start && trade.date < start) return false;
+    if (end && trade.date > end) return false;
+    return true;
+  });
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

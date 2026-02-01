@@ -8,6 +8,7 @@ type SettingsFormProps = {
   viewAccount: "REAL" | "BT" | "ALL";
   onClearAccountTrades: () => void;
   onClearAllTrades: () => void;
+  periodLabel: string;
 };
 
 export default function SettingsForm({
@@ -16,6 +17,7 @@ export default function SettingsForm({
   viewAccount,
   onClearAccountTrades,
   onClearAllTrades,
+  periodLabel,
 }: SettingsFormProps) {
   const [sbText, setSbText] = useState<string>(String(settings.startingBalance));
   const [btText, setBtText] = useState<string>(String(settings.btStartingBalance));
@@ -217,6 +219,70 @@ export default function SettingsForm({
             <option value="DAILY_SIM">Diário</option>
           </select>
         </label>
+
+        <label style={{ display: "grid", gap: 6 }}>
+          Período
+          <select
+            value={settings.periodFilter?.preset ?? "ALL"}
+            onChange={(e) => {
+              const preset = e.target.value as Settings["periodFilter"]["preset"];
+              update({
+                periodFilter:
+                  preset === "RANGE"
+                    ? {
+                        preset,
+                        start: settings.periodFilter?.start,
+                        end: settings.periodFilter?.end,
+                      }
+                    : { preset },
+              });
+            }}
+          >
+            <option value="ALL">Tudo</option>
+            <option value="LAST_7_DAYS">7 dias</option>
+            <option value="LAST_30_DAYS">30 dias</option>
+            <option value="RANGE">Intervalo</option>
+          </select>
+        </label>
+
+        {settings.periodFilter?.preset === "RANGE" && (
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+            <label style={{ display: "grid", gap: 6 }}>
+              Início
+              <input
+                type="date"
+                value={settings.periodFilter.start ?? ""}
+                onChange={(e) =>
+                  update({
+                    periodFilter: {
+                      preset: "RANGE",
+                      start: e.target.value || undefined,
+                      end: settings.periodFilter?.end,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              Fim
+              <input
+                type="date"
+                value={settings.periodFilter.end ?? ""}
+                onChange={(e) =>
+                  update({
+                    periodFilter: {
+                      preset: "RANGE",
+                      start: settings.periodFilter?.start,
+                      end: e.target.value || undefined,
+                    },
+                  })
+                }
+              />
+            </label>
+          </div>
+        )}
+
+        <small style={{ color: "#94a3b8" }}>{periodLabel}</small>
       </form>
 
       <details style={{ marginTop: 12 }}>

@@ -35,9 +35,15 @@ export function loadSettings(): Settings | null {
     if (!raw) return null
     const parsed = safeParse<Settings>(raw)
     if (!parsed || typeof parsed !== 'object') return null
-    const normalized = parsed as Settings & { btStartingBalance?: number }
+    const normalized = parsed as Settings & {
+      btStartingBalance?: number
+      periodFilter?: Settings['periodFilter']
+    }
     if (normalized.btStartingBalance == null) {
       normalized.btStartingBalance = normalized.startingBalance
+    }
+    if (!normalized.periodFilter || !normalized.periodFilter.preset) {
+      normalized.periodFilter = { preset: 'ALL' }
     }
     return normalized
   } catch {
