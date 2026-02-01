@@ -2,6 +2,7 @@ import type { Settings, Trade } from './types'
 
 const SETTINGS_KEY = 'tj_settings_v1'
 const TRADES_KEY = 'tj_trades_v1'
+const UI_LAST_SYMBOL_PREFIX = 'tj_ui_last_symbol_'
 
 const safeParse = <T>(value: string): T | null => {
   try {
@@ -180,6 +181,25 @@ export function resetAll(): void {
   try {
     window.localStorage.removeItem(SETTINGS_KEY)
     window.localStorage.removeItem(TRADES_KEY)
+  } catch {
+    return
+  }
+}
+
+export function loadLastSymbol(account: Trade['account']): string | undefined {
+  if (!canUseStorage()) return undefined
+  try {
+    const value = window.localStorage.getItem(`${UI_LAST_SYMBOL_PREFIX}${account}`)
+    return value === null ? undefined : value
+  } catch {
+    return undefined
+  }
+}
+
+export function saveLastSymbol(account: Trade['account'], symbol: string): void {
+  if (!canUseStorage()) return
+  try {
+    window.localStorage.setItem(`${UI_LAST_SYMBOL_PREFIX}${account}`, symbol)
   } catch {
     return
   }

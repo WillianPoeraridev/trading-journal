@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ResultType, RiskType, Settings, Trade } from "../core/types";
 import { weekdayLong } from "../core/format";
+import { loadLastSymbol, saveLastSymbol } from "../core/storage";
 
 type Props = {
   settings: Settings;
@@ -23,7 +24,9 @@ function uid(): string {
 
 export default function TradeForm({ settings, onAddTrade }: Props) {
   const [date, setDate] = useState<string>(todayISO());
-  const [symbol, setSymbol] = useState<string>("");
+  const [symbol, setSymbol] = useState<string>(
+    () => loadLastSymbol("REAL") ?? "",
+  );
   const [notes, setNotes] = useState<string>("");
   const [account, setAccount] = useState<Trade["account"]>("REAL");
 
@@ -72,9 +75,9 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
     };
 
     onAddTrade(trade);
+    saveLastSymbol(account, symbol);
 
     // reset parcial (mantém date por ser “um trade por dia”)
-    setSymbol("");
     setNotes("");
     setResultValue("");
   }
@@ -95,7 +98,13 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
 
         <label style={{ display: "grid", gap: 6 }}>
           Ativo (opcional)
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
+          <select
+            value={symbol}
+            onChange={(e) => {
+              setSymbol(e.target.value);
+              saveLastSymbol(account, e.target.value);
+            }}
+          >
             <option value="">(sem ativo)</option>
             {SYMBOLS.map((item) => (
               <option key={item} value={item}>
@@ -107,7 +116,17 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
 
         <label style={{ display: "grid", gap: 6 }}>
           Conta
-          <select value={account} onChange={(e) => setAccount(e.target.value as Trade["account"])}>
+          <select
+            value={account}
+            onChange={(e) => {
+              const next = e.target.value as Trade["account"];
+              setAccount(next);
+              const stored = loadLastSymbol(next);
+              if (stored !== undefined) {
+                setSymbol(stored);
+              }
+            }}
+          >
             <option value="REAL">Real</option>
             <option value="BT">Backtest</option>
           </select>
