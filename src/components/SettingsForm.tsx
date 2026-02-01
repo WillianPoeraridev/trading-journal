@@ -8,47 +8,35 @@ type SettingsFormProps = {
 };
 
 export default function SettingsForm({ settings, onChange }: SettingsFormProps) {
-  const [startingBalanceInput, setStartingBalanceInput] = useState<string>(
-    String(settings.startingBalance),
-  );
-  const [defaultRiskValueInput, setDefaultRiskValueInput] = useState<string>(
+  const [sbText, setSbText] = useState<string>(String(settings.startingBalance));
+  const [riskText, setRiskText] = useState<string>(
     String(settings.defaultRiskValue),
   );
-  const [dailyStopRInput, setDailyStopRInput] = useState<string>(
-    String(settings.dailyStopR),
-  );
-  const [dailyTakeRInput, setDailyTakeRInput] = useState<string>(
-    String(settings.dailyTakeR),
-  );
+  const [stopText, setStopText] = useState<string>(String(settings.dailyStopR));
+  const [takeText, setTakeText] = useState<string>(String(settings.dailyTakeR));
 
   useEffect(() => {
-    setStartingBalanceInput(String(settings.startingBalance));
+    setSbText(String(settings.startingBalance));
   }, [settings.startingBalance]);
 
   useEffect(() => {
-    setDefaultRiskValueInput(String(settings.defaultRiskValue));
+    setRiskText(String(settings.defaultRiskValue));
   }, [settings.defaultRiskValue]);
 
   useEffect(() => {
-    setDailyStopRInput(String(settings.dailyStopR));
+    setStopText(String(settings.dailyStopR));
   }, [settings.dailyStopR]);
 
   useEffect(() => {
-    setDailyTakeRInput(String(settings.dailyTakeR));
+    setTakeText(String(settings.dailyTakeR));
   }, [settings.dailyTakeR]);
 
-  const normalizeDecimal = (value: string): string => value.replace(/,/g, ".");
+  const normalizeDecimal = (value: string): string =>
+    value.trim().replace(",", ".");
 
   const parseDecimal = (value: string, fallback: number): number => {
     const trimmed = value.trim();
-    if (
-      trimmed === "" ||
-      trimmed === "-" ||
-      trimmed === "." ||
-      trimmed === "-." ||
-      trimmed === "," ||
-      trimmed === "-,"
-    ) {
+    if (trimmed === "" || trimmed === "-" || trimmed === ".") {
       return fallback;
     }
     const parsed = Number(normalizeDecimal(trimmed));
@@ -59,36 +47,32 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
     onChange({ ...settings, ...partial });
   };
 
-  const handleStartingBalance = (raw: string, commit: boolean) => {
-    setStartingBalanceInput(raw);
-    const parsed = parseDecimal(raw, settings.startingBalance);
+  const handleStartingBalanceBlur = () => {
+    const parsed = parseDecimal(sbText, settings.startingBalance);
     const next = Math.max(0, parsed);
     update({ startingBalance: next });
-    if (commit) setStartingBalanceInput(String(next));
+    setSbText(String(next));
   };
 
-  const handleDefaultRiskValue = (raw: string, commit: boolean) => {
-    setDefaultRiskValueInput(raw);
-    const parsed = parseDecimal(raw, settings.defaultRiskValue);
+  const handleDefaultRiskBlur = () => {
+    const parsed = parseDecimal(riskText, settings.defaultRiskValue);
     const next = Math.max(0, parsed);
     update({ defaultRiskValue: next });
-    if (commit) setDefaultRiskValueInput(String(next));
+    setRiskText(String(next));
   };
 
-  const handleDailyStopR = (raw: string, commit: boolean) => {
-    setDailyStopRInput(raw);
-    const parsed = parseDecimal(raw, settings.dailyStopR);
+  const handleDailyStopBlur = () => {
+    const parsed = parseDecimal(stopText, settings.dailyStopR);
     const next = -Math.abs(parsed);
     update({ dailyStopR: next });
-    if (commit) setDailyStopRInput(String(next));
+    setStopText(String(next));
   };
 
-  const handleDailyTakeR = (raw: string, commit: boolean) => {
-    setDailyTakeRInput(raw);
-    const parsed = parseDecimal(raw, settings.dailyTakeR);
+  const handleDailyTakeBlur = () => {
+    const parsed = parseDecimal(takeText, settings.dailyTakeR);
     const next = Math.abs(parsed);
     update({ dailyTakeR: next });
-    if (commit) setDailyTakeRInput(String(next));
+    setTakeText(String(next));
   };
 
   return (
@@ -100,9 +84,9 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
           <input
             type="text"
             inputMode="decimal"
-            value={startingBalanceInput}
-            onChange={(e) => handleStartingBalance(e.target.value, false)}
-            onBlur={(e) => handleStartingBalance(e.target.value, true)}
+            value={sbText}
+            onChange={(e) => setSbText(e.target.value)}
+            onBlur={handleStartingBalanceBlur}
           />
         </label>
 
@@ -133,9 +117,9 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
           <input
             type="text"
             inputMode="decimal"
-            value={defaultRiskValueInput}
-            onChange={(e) => handleDefaultRiskValue(e.target.value, false)}
-            onBlur={(e) => handleDefaultRiskValue(e.target.value, true)}
+            value={riskText}
+            onChange={(e) => setRiskText(e.target.value)}
+            onBlur={handleDefaultRiskBlur}
           />
         </label>
 
@@ -144,9 +128,9 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
           <input
             type="text"
             inputMode="decimal"
-            value={dailyStopRInput}
-            onChange={(e) => handleDailyStopR(e.target.value, false)}
-            onBlur={(e) => handleDailyStopR(e.target.value, true)}
+            value={stopText}
+            onChange={(e) => setStopText(e.target.value)}
+            onBlur={handleDailyStopBlur}
           />
         </label>
 
@@ -155,9 +139,9 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
           <input
             type="text"
             inputMode="decimal"
-            value={dailyTakeRInput}
-            onChange={(e) => handleDailyTakeR(e.target.value, false)}
-            onBlur={(e) => handleDailyTakeR(e.target.value, true)}
+            value={takeText}
+            onChange={(e) => setTakeText(e.target.value)}
+            onBlur={handleDailyTakeBlur}
           />
         </label>
 
