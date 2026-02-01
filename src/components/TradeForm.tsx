@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ResultType, RiskType, Settings, Trade } from "../core/types";
+import { weekdayLong } from "../core/format";
 
 type Props = {
   settings: Settings;
@@ -85,6 +86,9 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
           Data
           <input value={date} onChange={(e) => setDate(e.target.value)} type="date" />
         </label>
+        <div style={{ fontSize: 12, color: "#9ca3af" }}>
+          Dia da semana: {weekdayLong(date) || "-"}
+        </div>
 
         <label style={{ display: "grid", gap: 6 }}>
           Ativo (opcional)

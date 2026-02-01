@@ -49,13 +49,80 @@ export function saveSettings(settings: Settings): void {
   }
 }
 
+const toNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.')
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+  return fallback
+}
+
+const todayISO = (): string => {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const normalizeTrade = (value: unknown): Trade | null => {
+  if (!value || typeof value !== 'object') return null
+  const item = value as Record<string, unknown>
+
+  const rawId = item.id ?? item.tradeId
+  const id =
+    typeof rawId === 'string'
+      ? rawId
+      : typeof rawId === 'number'
+        ? String(rawId)
+        : ''
+  const date = typeof item.date === 'string' ? item.date : todayISO()
+
+  const riskType = item.riskType === 'FIXED' ? 'FIXED' : 'PERCENT'
+  const riskValue = toNumber(item.riskValue ?? item.risk ?? 0, 0)
+
+  const resultTypeRaw = item.resultType ?? item.resultMode ?? item.pnlUnit
+  const resultType = resultTypeRaw === 'R' ? 'R' : 'MONEY'
+  const resultValue = toNumber(item.resultValue ?? item.pnl ?? item.result ?? 0, 0)
+
+  const createdAt = toNumber(item.createdAt ?? item.timestamp ?? Date.now(), Date.now())
+
+  const symbol =
+    typeof item.symbol === 'string' && item.symbol.trim() !== ''
+      ? item.symbol
+      : undefined
+  const notes =
+    typeof item.notes === 'string' && item.notes.trim() !== ''
+      ? item.notes
+      : undefined
+
+  if (!id) {
+    return null
+  }
+
+  return {
+    id,
+    date,
+    symbol,
+    notes,
+    riskType,
+    riskValue,
+    resultType,
+    resultValue,
+    createdAt,
+  }
+}
+
 export function loadTrades(): Trade[] {
   if (!canUseStorage()) return []
   try {
     const raw = window.localStorage.getItem(TRADES_KEY)
     if (!raw) return []
-    const parsed = safeParse<Trade[]>(raw)
-    return Array.isArray(parsed) ? parsed : []
+    const parsed = safeParse<unknown>(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.map(normalizeTrade).filter((trade): trade is Trade => !!trade)
   } catch {
     return []
   }

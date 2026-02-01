@@ -1,6 +1,11 @@
 import type { CSSProperties } from "react";
 import type { LedgerRow } from "../core/types";
-import { formatMoney, formatPct, formatR } from "../core/format";
+import {
+  formatDateWithWeekday,
+  formatMoney,
+  formatPct,
+  formatR,
+} from "../core/format";
 
 type TradesTableProps = {
   ledger: LedgerRow[];
@@ -63,7 +68,7 @@ export default function TradesTable({
           {ledger.map((row) => (
             <tr key={row.tradeId}>
               <td style={cellLeft}>{row.index}</td>
-              <td style={cellLeft}>{row.date}</td>
+              <td style={cellLeft}>{formatDateWithWeekday(row.date, "short")}</td>
               <td style={cellLeft}>{row.symbol ?? "-"}</td>
               <td style={cellRight}>{formatMoney(row.pnl, currency)}</td>
               <td style={cellRight}>{formatR(row.rMultiple, 3)}</td>

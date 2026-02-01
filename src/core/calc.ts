@@ -37,7 +37,7 @@ function sortTrades(trades: Trade[]): Trade[] {
   return [...trades].sort((a, b) => {
     if (a.date < b.date) return -1;
     if (a.date > b.date) return 1;
-    return a.createdAt - b.createdAt;
+    return a.id.localeCompare(b.id);
   });
 }
 

@@ -1,6 +1,6 @@
 import type { DailySummary } from "../core/daily";
 import type { Settings } from "../core/types";
-import { formatMoney, formatR } from "../core/format";
+import { formatDateWithWeekday, formatMoney, formatR } from "../core/format";
 
 type DailyPanelProps = {
   summaries: DailySummary[];
@@ -21,32 +21,58 @@ const statusLabel: Record<DailySummary["status"], string> = {
   TAKE_HIT: "Take atingido",
 };
 
+const todayISO = (): string => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export default function DailyPanel({
   summaries,
   currency,
   settings,
 }: DailyPanelProps) {
-  if (summaries.length === 0) {
-    return <p>Sem trades no diário ainda.</p>;
-  }
+  const maxDate =
+    summaries.length === 0
+      ? todayISO()
+      : summaries.reduce(
+          (max, item) => (item.date > max ? item.date : max),
+          summaries[0].date,
+        );
 
-  const last = summaries[summaries.length - 1];
+  const todaySummary =
+    summaries.find((item) => item.date === maxDate) ?? {
+      date: maxDate,
+      trades: 0,
+      dayPnl: 0,
+      dayR: 0,
+      status: "OK" as const,
+    };
 
   return (
     <section>
       <h2>Regras do dia</h2>
       <div className={cardClass}>
         <div className={labelClass}>Hoje</div>
-        <div className={valueClass}>{last.date}</div>
-        <div className={subClass}>
-          Trades: {last.trades}/{settings.maxTradesPerDay}
+        <div className={valueClass}>
+          {formatDateWithWeekday(todaySummary.date, "long")}
         </div>
         <div className={subClass}>
-          PnL do dia: {formatMoney(last.dayPnl, currency)}
+          Trades: {todaySummary.trades}/{settings.maxTradesPerDay}
         </div>
-        <div className={subClass}>R do dia: {formatR(last.dayR, 2)}</div>
-        <div className={subClass}>Status: {statusLabel[last.status]}</div>
+        <div className={subClass}>
+          PnL do dia: {formatMoney(todaySummary.dayPnl, currency)}
+        </div>
+        <div className={subClass}>R do dia: {formatR(todaySummary.dayR, 2)}</div>
+        <div className={subClass}>Status: {statusLabel[todaySummary.status]}</div>
       </div>
+      {summaries.length === 0 && (
+        <p className={subClass} style={{ marginTop: 8 }}>
+          Sem trades no diário ainda.
+        </p>
+      )}
     </section>
   );
 }

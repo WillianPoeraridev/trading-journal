@@ -101,3 +101,59 @@ export function stringifyPretty(obj: any, decimals = 2): string {
     }
   }
 }
+
+const parseISODate = (dateISO: string): Date | null => {
+  if (!dateISO) return null
+  const parts = dateISO.split('-').map((part) => Number(part))
+  if (parts.length !== 3) return null
+  const [year, month, day] = parts
+  if (!year || !month || !day) return null
+  const date = new Date(year, month - 1, day)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function formatDateBR(dateISO: string): string {
+  const date = parseISODate(dateISO)
+  if (!date) return dateISO
+  const dd = String(date.getDate()).padStart(2, '0')
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(date.getFullYear())
+  return `${dd}/${mm}/${yyyy}`
+}
+
+export function weekdayShort(dateISO: string): string {
+  const date = parseISODate(dateISO)
+  if (!date) return ''
+  try {
+    const label = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(
+      date,
+    )
+    const cleaned = label.replace('.', '')
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+  } catch {
+    return ''
+  }
+}
+
+export function weekdayLong(dateISO: string): string {
+  const date = parseISODate(dateISO)
+  if (!date) return ''
+  try {
+    const label = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(
+      date,
+    )
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  } catch {
+    return ''
+  }
+}
+
+export function formatDateWithWeekday(
+  dateISO: string,
+  mode: 'short' | 'long' = 'short',
+): string {
+  const dateText = formatDateBR(dateISO)
+  const weekday = mode === 'long' ? weekdayLong(dateISO) : weekdayShort(dateISO)
+  if (!weekday) return dateText
+  return `${dateText} (${weekday})`
+}
