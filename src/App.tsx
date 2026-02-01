@@ -71,7 +71,11 @@ function App() {
 
       <main className="app__main">
         <section className="app__panel">
-          <MetricsPanel metrics={metrics} projection={projection} />
+          <MetricsPanel
+            metrics={metrics}
+            projection={projection}
+            currency={settings.currency}
+          />
         </section>
 
         <section className="app__panel">
