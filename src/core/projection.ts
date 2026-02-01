@@ -15,13 +15,6 @@ type DerivedStats = {
   distribution: number[]
 }
 
-const DEFAULT_STATS: Omit<DerivedStats, 'distribution'> = {
-  winRate: 0.5,
-  avgWinR: 2,
-  avgLossR: -1,
-  expectancyR: 0.5 * 2 + 0.5 * -1,
-}
-
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value))
 
@@ -62,8 +55,12 @@ export function deriveStatsFromTrades(
   const rAll = ledger.map((row) => row.rMultiple)
 
   if (rAll.length < 3) {
+    const expectancyR = rAll.length === 0 ? 0 : mean(rAll)
     return {
-      ...DEFAULT_STATS,
+      winRate: 0,
+      avgWinR: 0,
+      avgLossR: 0,
+      expectancyR,
       distribution: rAll,
     }
   }
@@ -72,16 +69,14 @@ export function deriveStatsFromTrades(
   const losses = rAll.filter((r) => r < 0)
   const decisive = wins.length + losses.length
 
-  const winRate = decisive === 0 ? DEFAULT_STATS.winRate : wins.length / decisive
-  const avgWinR = wins.length === 0 ? DEFAULT_STATS.avgWinR : mean(wins)
-  const avgLossR = losses.length === 0 ? DEFAULT_STATS.avgLossR : mean(losses)
+  const winRate = decisive === 0 ? 0 : wins.length / decisive
+  const avgWinR = wins.length === 0 ? 0 : mean(wins)
+  const avgLossR = losses.length === 0 ? 0 : mean(losses)
 
   const pWin = decisive === 0 ? 0 : wins.length / decisive
   const pLoss = decisive === 0 ? 0 : losses.length / decisive
   const expectancyR =
-    decisive === 0
-      ? DEFAULT_STATS.expectancyR
-      : pWin * avgWinR + pLoss * avgLossR
+    decisive === 0 ? 0 : pWin * avgWinR + pLoss * avgLossR
 
   return {
     winRate,
