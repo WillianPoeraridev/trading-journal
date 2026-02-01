@@ -32,7 +32,13 @@ export function loadSettings(): Settings | null {
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY)
     if (!raw) return null
-    return safeParse<Settings>(raw)
+    const parsed = safeParse<Settings>(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    const normalized = parsed as Settings & { btStartingBalance?: number }
+    if (normalized.btStartingBalance == null) {
+      normalized.btStartingBalance = normalized.startingBalance
+    }
+    return normalized
   } catch {
     return null
   }
@@ -89,6 +95,9 @@ const normalizeTrade = (value: unknown): Trade | null => {
 
   const createdAt = toNumber(item.createdAt ?? item.timestamp ?? Date.now(), Date.now())
 
+  const accountRaw = item.account ?? item.tradeAccount ?? item.book
+  const account = accountRaw === 'BT' ? 'BT' : 'REAL'
+
   const symbol =
     typeof item.symbol === 'string' && item.symbol.trim() !== ''
       ? item.symbol
@@ -109,6 +118,7 @@ const normalizeTrade = (value: unknown): Trade | null => {
     notes,
     riskType,
     riskValue,
+    account,
     resultType,
     resultValue,
     createdAt,

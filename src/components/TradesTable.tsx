@@ -55,6 +55,7 @@ export default function TradesTable({
             <th style={headerCellStyle}>#</th>
             <th style={headerCellStyle}>Data</th>
             <th style={headerCellStyle}>Ativo</th>
+            <th style={headerCellStyle}>Conta</th>
             <th style={{ ...headerCellStyle, textAlign: "right" }}>PnL</th>
             <th style={{ ...headerCellStyle, textAlign: "right" }}>R</th>
             <th style={{ ...headerCellStyle, textAlign: "right" }}>Risco</th>
@@ -70,6 +71,7 @@ export default function TradesTable({
               <td style={cellLeft}>{row.index}</td>
               <td style={cellLeft}>{formatDateWithWeekday(row.date, "short")}</td>
               <td style={cellLeft}>{row.symbol ?? "-"}</td>
+              <td style={cellLeft}>{row.account}</td>
               <td style={cellRight}>{formatMoney(row.pnl, currency)}</td>
               <td style={cellRight}>{formatR(row.rMultiple, 3)}</td>
               <td style={cellRight}>{formatMoney(row.riskAmount, currency)}</td>

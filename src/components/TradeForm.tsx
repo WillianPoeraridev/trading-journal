@@ -25,6 +25,7 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
   const [date, setDate] = useState<string>(todayISO());
   const [symbol, setSymbol] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [account, setAccount] = useState<Trade["account"]>("REAL");
 
   const [resultType, setResultType] = useState<ResultType>("MONEY");
   const [resultValue, setResultValue] = useState<string>("");
@@ -61,6 +62,8 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
 
       riskType: useDefaultRisk ? settings.defaultRiskType : riskType,
       riskValue: useDefaultRisk ? settings.defaultRiskValue : riskV,
+
+      account,
 
       resultType,
       resultValue: rv,
@@ -99,6 +102,14 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
                 {item}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 6 }}>
+          Conta
+          <select value={account} onChange={(e) => setAccount(e.target.value as Trade["account"])}>
+            <option value="REAL">Real</option>
+            <option value="BT">Backtest</option>
           </select>
         </label>
 

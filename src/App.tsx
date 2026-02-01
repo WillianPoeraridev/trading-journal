@@ -14,6 +14,7 @@ import { summarizeByDay } from './core/daily'
 function App() {
   const defaultSettings: Settings = {
     startingBalance: 10000,
+    btStartingBalance: 10000,
     currency: 'USD',
     defaultRiskType: 'PERCENT',
     defaultRiskValue: 1,
@@ -30,18 +31,40 @@ function App() {
   }))
   const [trades, setTrades] = useState<Trade[]>(() => loadTrades())
 
-  const ledger = useMemo(() => buildLedger(trades, settings), [trades, settings])
-  const daily = useMemo(() => summarizeByDay(ledger, settings), [ledger, settings])
+  const [viewAccount, setViewAccount] = useState<'REAL' | 'BT' | 'ALL'>('REAL')
+
+  const visibleTrades = useMemo(() => {
+    if (viewAccount === 'ALL') return trades
+    return trades.filter((trade) => trade.account === viewAccount)
+  }, [trades, viewAccount])
+
+  const effectiveSettings = useMemo(
+    () => ({
+      ...settings,
+      startingBalance:
+        viewAccount === 'BT' ? settings.btStartingBalance : settings.startingBalance,
+    }),
+    [settings, viewAccount],
+  )
+
+  const ledger = useMemo(
+    () => buildLedger(visibleTrades, effectiveSettings),
+    [visibleTrades, effectiveSettings],
+  )
+  const daily = useMemo(
+    () => summarizeByDay(ledger, effectiveSettings),
+    [ledger, effectiveSettings],
+  )
   const currentBalance = useMemo(
     () =>
       ledger.length > 0
         ? ledger[ledger.length - 1].balanceAfter
-        : settings.startingBalance,
-    [ledger, settings.startingBalance],
+        : effectiveSettings.startingBalance,
+    [ledger, effectiveSettings.startingBalance],
   )
   const metrics = useMemo(
-    () => calculateMetrics(trades, ledger, settings),
-    [trades, ledger, settings],
+    () => calculateMetrics(visibleTrades, ledger, effectiveSettings),
+    [visibleTrades, ledger, effectiveSettings],
   )
 
   const projectionSettings: ProjectionSettings = {
@@ -55,12 +78,18 @@ function App() {
       return projectDailySim({
         startBalance: currentBalance,
         horizonDays: projectionSettings.horizonDays,
-        settings,
+        settings: effectiveSettings,
         metrics,
       })
     }
-    return project(trades, settings, projectionSettings)
-  }, [trades, settings, projectionSettings.horizonDays, metrics, currentBalance])
+    return project(visibleTrades, effectiveSettings, projectionSettings)
+  }, [
+    visibleTrades,
+    effectiveSettings,
+    projectionSettings.horizonDays,
+    metrics,
+    currentBalance,
+  ])
 
   const handleSettingsChange = (next: Settings) => {
     setSettings(next)
@@ -89,6 +118,20 @@ function App() {
         <SettingsForm settings={settings} onChange={handleSettingsChange} />
       </header>
 
+      <div style={{ marginTop: 12 }}>
+        <label style={{ display: 'grid', gap: 6, maxWidth: 240 }}>
+          Visualizar
+          <select
+            value={viewAccount}
+            onChange={(e) => setViewAccount(e.target.value as 'REAL' | 'BT' | 'ALL')}
+          >
+            <option value="REAL">Real</option>
+            <option value="BT">Backtest</option>
+            <option value="ALL">Todas</option>
+          </select>
+        </label>
+      </div>
+
       <main className="app__main">
         <section className="app__panel">
           <MetricsPanel
@@ -103,6 +146,7 @@ function App() {
             summaries={daily}
             currency={settings.currency}
             settings={settings}
+            viewAccount={viewAccount}
           />
         </section>
 

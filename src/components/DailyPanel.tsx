@@ -6,6 +6,7 @@ type DailyPanelProps = {
   summaries: DailySummary[];
   currency: string;
   settings: Settings;
+  viewAccount: "REAL" | "BT" | "ALL";
 };
 
 const cardClass =
@@ -33,6 +34,7 @@ export default function DailyPanel({
   summaries,
   currency,
   settings,
+  viewAccount,
 }: DailyPanelProps) {
   const maxDate =
     summaries.length === 0
@@ -51,6 +53,9 @@ export default function DailyPanel({
       status: "OK" as const,
     };
 
+  const accountLabel =
+    viewAccount === "ALL" ? "Todas" : viewAccount === "REAL" ? "Real" : "Backtest";
+
   return (
     <section>
       <h2>Regras do dia</h2>
@@ -62,6 +67,7 @@ export default function DailyPanel({
         <div className={subClass}>
           Trades: {todaySummary.trades}/{settings.maxTradesPerDay}
         </div>
+        <div className={subClass}>Conta: {accountLabel}</div>
         <div className={subClass}>
           PnL do dia: {formatMoney(todaySummary.dayPnl, currency)}
         </div>

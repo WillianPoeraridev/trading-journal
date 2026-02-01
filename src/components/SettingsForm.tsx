@@ -9,6 +9,7 @@ type SettingsFormProps = {
 
 export default function SettingsForm({ settings, onChange }: SettingsFormProps) {
   const [sbText, setSbText] = useState<string>(String(settings.startingBalance));
+  const [btText, setBtText] = useState<string>(String(settings.btStartingBalance));
   const [riskText, setRiskText] = useState<string>(
     String(settings.defaultRiskValue),
   );
@@ -18,6 +19,10 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
   useEffect(() => {
     setSbText(String(settings.startingBalance));
   }, [settings.startingBalance]);
+
+  useEffect(() => {
+    setBtText(String(settings.btStartingBalance));
+  }, [settings.btStartingBalance]);
 
   useEffect(() => {
     setRiskText(String(settings.defaultRiskValue));
@@ -54,6 +59,13 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
     setSbText(String(next));
   };
 
+  const handleBtBalanceBlur = () => {
+    const parsed = parseDecimal(btText, settings.btStartingBalance);
+    const next = Math.max(0, parsed);
+    update({ btStartingBalance: next });
+    setBtText(String(next));
+  };
+
   const handleDefaultRiskBlur = () => {
     const parsed = parseDecimal(riskText, settings.defaultRiskValue);
     const next = Math.max(0, parsed);
@@ -87,6 +99,17 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
             value={sbText}
             onChange={(e) => setSbText(e.target.value)}
             onBlur={handleStartingBalanceBlur}
+          />
+        </label>
+
+        <label style={{ display: "grid", gap: 6 }}>
+          Banca inicial (Backtest)
+          <input
+            type="text"
+            inputMode="decimal"
+            value={btText}
+            onChange={(e) => setBtText(e.target.value)}
+            onBlur={handleBtBalanceBlur}
           />
         </label>
 

@@ -2,6 +2,7 @@ export type RiskType = "PERCENT" | "FIXED";
 export type ReturnMode = "ON_STARTING_BALANCE" | "ON_PREV_BALANCE";
 export type ResultType = "MONEY" | "R";
 export type ProjectionMethod = "DETERMINISTIC" | "MONTE_CARLO" | "DAILY_SIM";
+export type TradeAccount = "REAL" | "BT";
 
 export type Settings = {
   startingBalance: number;
@@ -15,6 +16,7 @@ export type Settings = {
   maxTradesPerDay: number; // 1 padrão, 2 exceção
   returnMode: ReturnMode;
   projectionMethod: "DETERMINISTIC" | "DAILY_SIM";
+  btStartingBalance: number;
 };
 
 export type Trade = {
@@ -26,6 +28,8 @@ export type Trade = {
   // risco (pode ser override do default)
   riskType: RiskType;
   riskValue: number;
+
+  account: TradeAccount;
 
   // resultado lançado pelo usuário (em $ ou em R)
   resultType: ResultType;
@@ -48,6 +52,7 @@ export type LedgerRow = {
   balanceAfter: number;
   returnPct: number;
 
+  account: TradeAccount;
   symbol?: string;
 };
 

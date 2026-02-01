@@ -98,6 +98,7 @@ export function buildLedger(trades: Trade[], settings: Settings): LedgerRow[] {
       rMultiple,
       balanceAfter,
       returnPct,
+      account: t.account,
       symbol: t.symbol,
     });
 
