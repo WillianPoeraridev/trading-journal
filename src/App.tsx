@@ -3,11 +3,13 @@ import MetricsPanel from './components/MetricsPanel'
 import SettingsForm from './components/SettingsForm'
 import TradeForm from './components/TradeForm'
 import TradesTable from './components/TradesTable'
+import DailyPanel from './components/DailyPanel'
 import { useEffect, useMemo, useState } from 'react'
 import type { ProjectionSettings, Settings, Trade } from './core/types'
 import { calculateMetrics, buildLedger } from './core/calc'
 import { project } from './core/projection'
 import { loadSettings, loadTrades, saveSettings, saveTrades } from './core/storage'
+import { summarizeByDay } from './core/daily'
 
 function App() {
   const defaultSettings: Settings = {
@@ -27,6 +29,7 @@ function App() {
   const [trades, setTrades] = useState<Trade[]>(() => loadTrades())
 
   const ledger = useMemo(() => buildLedger(trades, settings), [trades, settings])
+  const daily = useMemo(() => summarizeByDay(ledger, settings), [ledger, settings])
   const metrics = useMemo(
     () => calculateMetrics(trades, ledger, settings),
     [trades, ledger, settings],
@@ -75,6 +78,14 @@ function App() {
             metrics={metrics}
             projection={projection}
             currency={settings.currency}
+          />
+        </section>
+
+        <section className="app__panel">
+          <DailyPanel
+            summaries={daily}
+            currency={settings.currency}
+            settings={settings}
           />
         </section>
 
