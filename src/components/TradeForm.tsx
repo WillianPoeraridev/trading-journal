@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ResultType, RiskType, Settings, Trade } from "../core/types";
 
 type Props = {
@@ -31,7 +31,7 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
   const [riskValue, setRiskValue] = useState<string>(String(settings.defaultRiskValue));
 
   // manter risco sincronizado quando settings mudar e estiver usando default
-  useMemo(() => {
+  useEffect(() => {
     if (useDefaultRisk) {
       setRiskType(settings.defaultRiskType);
       setRiskValue(String(settings.defaultRiskValue));
