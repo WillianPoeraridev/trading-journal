@@ -6,6 +6,8 @@ type Props = {
   onAddTrade: (trade: Trade) => void;
 };
 
+const SYMBOLS = ["EUR/USD", "USD/JPY", "GBP/USD", "US30", "US100"] as const;
+
 function todayISO(): string {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -86,7 +88,14 @@ export default function TradeForm({ settings, onAddTrade }: Props) {
 
         <label style={{ display: "grid", gap: 6 }}>
           Ativo (opcional)
-          <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="ex: EURUSD" />
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
+            <option value="">(sem ativo)</option>
+            {SYMBOLS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
