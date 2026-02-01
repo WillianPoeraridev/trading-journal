@@ -161,6 +161,20 @@ export function updateTrade(
   return next
 }
 
+export function clearTradesByAccount(
+  trades: Trade[],
+  account: Trade['account'],
+): Trade[] {
+  const next = trades.filter((trade) => trade.account !== account)
+  saveTrades(next)
+  return next
+}
+
+export function clearAllTrades(): Trade[] {
+  saveTrades([])
+  return []
+}
+
 export function resetAll(): void {
   if (!canUseStorage()) return
   try {

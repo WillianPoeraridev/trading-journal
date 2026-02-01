@@ -5,9 +5,18 @@ import { stringifyPretty } from "../core/format";
 type SettingsFormProps = {
   settings: Settings;
   onChange: (settings: Settings) => void;
+  viewAccount: "REAL" | "BT" | "ALL";
+  onClearAccountTrades: () => void;
+  onClearAllTrades: () => void;
 };
 
-export default function SettingsForm({ settings, onChange }: SettingsFormProps) {
+export default function SettingsForm({
+  settings,
+  onChange,
+  viewAccount,
+  onClearAccountTrades,
+  onClearAllTrades,
+}: SettingsFormProps) {
   const [sbText, setSbText] = useState<string>(String(settings.startingBalance));
   const [btText, setBtText] = useState<string>(String(settings.btStartingBalance));
   const [riskText, setRiskText] = useState<string>(
@@ -214,6 +223,27 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
         <summary>Debug</summary>
         <pre>{stringifyPretty(settings, 2)}</pre>
       </details>
+
+      <section style={{ marginTop: 16 }}>
+        <h3>Dados</h3>
+        <div style={{ display: "grid", gap: 8, maxWidth: 320 }}>
+          <button
+            type="button"
+            onClick={onClearAccountTrades}
+            disabled={viewAccount === "ALL"}
+          >
+            Limpar trades desta conta
+          </button>
+          <button type="button" onClick={onClearAllTrades}>
+            Limpar TODOS os trades
+          </button>
+          {viewAccount === "ALL" && (
+            <small style={{ color: "#94a3b8" }}>
+              Selecione Real ou Backtest para limpar apenas uma conta.
+            </small>
+          )}
+        </div>
+      </section>
     </section>
   );
 }

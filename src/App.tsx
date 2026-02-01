@@ -14,6 +14,8 @@ import {
   saveSettings,
   saveTrades,
   updateTrade,
+  clearAllTrades,
+  clearTradesByAccount,
 } from './core/storage'
 import { summarizeByDay } from './core/daily'
 
@@ -114,6 +116,26 @@ function App() {
     setTrades((prev) => updateTrade(prev, tradeId, patch))
   }
 
+  const handleClearAccountTrades = () => {
+    if (viewAccount === 'ALL') {
+      window.alert('Selecione Real ou Backtest para limpar apenas uma conta.')
+      return
+    }
+    const confirmed = window.confirm(
+      'Tem certeza? Isso vai apagar os trades desta conta. Essa ação não pode ser desfeita.',
+    )
+    if (!confirmed) return
+    setTrades((prev) => clearTradesByAccount(prev, viewAccount))
+  }
+
+  const handleClearAllTrades = () => {
+    const confirmed = window.confirm(
+      'Tem certeza? Isso vai apagar TODOS os trades. Essa ação não pode ser desfeita.',
+    )
+    if (!confirmed) return
+    setTrades(() => clearAllTrades())
+  }
+
   useEffect(() => {
     saveTrades(trades)
   }, [trades])
@@ -125,7 +147,13 @@ function App() {
           <h1>Trading Journal</h1>
           <p>Registre operações, acompanhe métricas e gere seu extrato.</p>
         </div>
-        <SettingsForm settings={settings} onChange={handleSettingsChange} />
+        <SettingsForm
+          settings={settings}
+          onChange={handleSettingsChange}
+          viewAccount={viewAccount}
+          onClearAccountTrades={handleClearAccountTrades}
+          onClearAllTrades={handleClearAllTrades}
+        />
       </header>
 
       <div style={{ marginTop: 12 }}>
