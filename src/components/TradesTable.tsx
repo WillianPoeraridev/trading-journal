@@ -1,4 +1,5 @@
 import type { LedgerRow } from '../core/types'
+import { stringifyPretty } from '../core/format'
 
 type TradesTableProps = {
   ledger: LedgerRow[]
@@ -8,7 +9,7 @@ function TradesTable({ ledger }: TradesTableProps) {
   return (
     <div>
       <h2>Historico</h2>
-      <pre>{JSON.stringify(ledger, null, 2)}</pre>
+      <pre>{stringifyPretty(ledger, 2)}</pre>
     </div>
   )
 }

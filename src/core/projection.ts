@@ -5,6 +5,7 @@ import type {
   Trade,
 } from './types'
 import { buildLedger, riskAmount } from './calc'
+import { roundTo } from './format'
 
 type DerivedStats = {
   winRate: number
@@ -49,29 +50,31 @@ const sample = (values: number[]): number => {
 
 const getStartBalance = (trades: Trade[], settings: Settings): number => {
   const ledger = buildLedger(trades, settings)
-  if (ledger.length === 0) return settings.startingBalance
-  return ledger[ledger.length - 1].balanceAfter
+  if (ledger.length === 0) return roundTo(settings.startingBalance, 2)
+  return roundTo(ledger[ledger.length - 1].balanceAfter, 2)
 }
 
-export function deriveStatsFromTrades(trades: Trade[]): DerivedStats {
-  if (trades.length < 3) {
+export function deriveStatsFromTrades(
+  trades: Trade[],
+  settings: Settings,
+): DerivedStats {
+  const ledger = buildLedger(trades, settings)
+  const rAll = ledger.map((row) => row.rMultiple)
+
+  if (rAll.length < 3) {
     return {
       ...DEFAULT_STATS,
-      distribution: trades.map((trade) => trade.rMultiple),
+      distribution: rAll,
     }
   }
 
-  const wins = trades.filter((trade) => trade.rMultiple > 0)
-  const losses = trades.filter((trade) => trade.rMultiple < 0)
+  const wins = rAll.filter((r) => r > 0)
+  const losses = rAll.filter((r) => r < 0)
   const decisive = wins.length + losses.length
 
   const winRate = decisive === 0 ? DEFAULT_STATS.winRate : wins.length / decisive
-  const avgWinR =
-    wins.length === 0 ? DEFAULT_STATS.avgWinR : mean(wins.map((t) => t.rMultiple))
-  const avgLossR =
-    losses.length === 0
-      ? DEFAULT_STATS.avgLossR
-      : mean(losses.map((t) => t.rMultiple))
+  const avgWinR = wins.length === 0 ? DEFAULT_STATS.avgWinR : mean(wins)
+  const avgLossR = losses.length === 0 ? DEFAULT_STATS.avgLossR : mean(losses)
 
   const pWin = decisive === 0 ? 0 : wins.length / decisive
   const pLoss = decisive === 0 ? 0 : losses.length / decisive
@@ -85,7 +88,7 @@ export function deriveStatsFromTrades(trades: Trade[]): DerivedStats {
     avgWinR,
     avgLossR,
     expectancyR,
-    distribution: trades.map((trade) => trade.rMultiple),
+    distribution: rAll,
   }
 }
 
@@ -94,24 +97,24 @@ export function projectDeterministic(
   settings: Settings,
   projectionSettings: ProjectionSettings,
 ): number[] {
-  const stats = deriveStatsFromTrades(trades)
+  const stats = deriveStatsFromTrades(trades, settings)
   const horizonDays = Math.max(0, projectionSettings.horizonDays)
   const path: number[] = []
 
   let balance = getStartBalance(trades, settings)
-  path.push(balance)
+  path.push(roundTo(balance, 2))
 
   for (let day = 1; day <= horizonDays; day += 1) {
-    const trade: Trade = {
-      id: `proj-${day}`,
-      date: '',
-      riskType: settings.defaultRiskType,
-      riskValue: settings.defaultRiskValue,
-      rMultiple: stats.expectancyR,
-    }
-    const risk = riskAmount(balance, trade, settings)
+    const risk = riskAmount(
+      balance,
+      {
+        riskType: settings.defaultRiskType,
+        riskValue: settings.defaultRiskValue,
+      },
+      settings,
+    )
     const pnl = risk * stats.expectancyR
-    balance += pnl
+    balance = roundTo(balance + pnl, 2)
     path.push(balance)
   }
 
@@ -123,7 +126,7 @@ export function projectMonteCarlo(
   settings: Settings,
   projectionSettings: ProjectionSettings,
 ): { p10: number[]; p50: number[]; p90: number[] } {
-  const stats = deriveStatsFromTrades(trades)
+  const stats = deriveStatsFromTrades(trades, settings)
   const distribution =
     stats.distribution.length > 0
       ? stats.distribution
@@ -135,7 +138,7 @@ export function projectMonteCarlo(
 
   for (let sim = 0; sim < simulations; sim += 1) {
     let balance = getStartBalance(trades, settings)
-    const path: number[] = [balance]
+    const path: number[] = [roundTo(balance, 2)]
 
     for (let day = 1; day <= horizonDays; day += 1) {
       let dayR = 0
@@ -143,16 +146,16 @@ export function projectMonteCarlo(
 
       for (let t = 0; t < maxTrades; t += 1) {
         const rMultiple = sample(distribution)
-        const trade: Trade = {
-          id: `mc-${sim}-${day}-${t}`,
-          date: '',
-          riskType: settings.defaultRiskType,
-          riskValue: settings.defaultRiskValue,
-          rMultiple,
-        }
-        const risk = riskAmount(balance, trade, settings)
+        const risk = riskAmount(
+          balance,
+          {
+            riskType: settings.defaultRiskType,
+            riskValue: settings.defaultRiskValue,
+          },
+          settings,
+        )
         const pnl = risk * rMultiple
-        balance += pnl
+        balance = roundTo(balance + pnl, 2)
         dayR += rMultiple
 
         if (dayR >= settings.dailyTakeR || dayR <= settings.dailyStopR) {
@@ -160,7 +163,7 @@ export function projectMonteCarlo(
         }
       }
 
-      path.push(balance)
+      path.push(roundTo(balance, 2))
     }
 
     paths.push(path)
@@ -172,9 +175,9 @@ export function projectMonteCarlo(
 
   for (let day = 0; day <= horizonDays; day += 1) {
     const dayBalances = paths.map((path) => path[day] ?? path[path.length - 1])
-    p10.push(percentile(dayBalances, 0.1))
-    p50.push(percentile(dayBalances, 0.5))
-    p90.push(percentile(dayBalances, 0.9))
+    p10.push(roundTo(percentile(dayBalances, 0.1), 2))
+    p50.push(roundTo(percentile(dayBalances, 0.5), 2))
+    p90.push(roundTo(percentile(dayBalances, 0.9), 2))
   }
 
   return { p10, p50, p90 }
@@ -185,7 +188,7 @@ export function project(
   settings: Settings,
   projectionSettings: ProjectionSettings,
 ): ProjectionResult {
-  const startBalance = getStartBalance(trades, settings)
+  const startBalance = roundTo(getStartBalance(trades, settings), 2)
   const horizonDays = Math.max(0, projectionSettings.horizonDays)
 
   if (projectionSettings.method === 'DETERMINISTIC') {
@@ -202,10 +205,10 @@ export function project(
       horizonDays,
       deterministicPath,
       summary: {
-        startBalance,
-        endBalanceP50: endBalance,
-        endBalanceP10: endBalance,
-        endBalanceP90: endBalance,
+        startBalance: roundTo(startBalance, 2),
+        endBalanceP50: roundTo(endBalance, 2),
+        endBalanceP10: roundTo(endBalance, 2),
+        endBalanceP90: roundTo(endBalance, 2),
       },
     }
   }
@@ -223,10 +226,10 @@ export function project(
     horizonDays,
     monteCarlo,
     summary: {
-      startBalance,
-      endBalanceP50,
-      endBalanceP10,
-      endBalanceP90,
+      startBalance: roundTo(startBalance, 2),
+      endBalanceP50: roundTo(endBalanceP50, 2),
+      endBalanceP10: roundTo(endBalanceP10, 2),
+      endBalanceP90: roundTo(endBalanceP90, 2),
     },
   }
 }

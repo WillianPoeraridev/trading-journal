@@ -1,4 +1,5 @@
 import type { Metrics, ProjectionResult } from '../core/types'
+import { stringifyPretty } from '../core/format'
 
 type MetricsPanelProps = {
   metrics: Metrics
@@ -9,8 +10,8 @@ function MetricsPanel({ metrics, projection }: MetricsPanelProps) {
   return (
     <div>
       <h2>Metricas</h2>
-      <pre>{JSON.stringify(metrics, null, 2)}</pre>
-      <pre>{JSON.stringify(projection, null, 2)}</pre>
+      <pre>{stringifyPretty(metrics, 2)}</pre>
+      <pre>{stringifyPretty(projection, 2)}</pre>
     </div>
   )
 }

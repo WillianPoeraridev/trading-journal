@@ -1,4 +1,5 @@
 import type { Settings } from '../core/types'
+import { stringifyPretty } from '../core/format'
 
 type SettingsFormProps = {
   settings: Settings
@@ -10,7 +11,7 @@ function SettingsForm({ settings, onChange }: SettingsFormProps) {
   return (
     <div>
       <h2>Configuracoes</h2>
-      <pre>{JSON.stringify(settings, null, 2)}</pre>
+      <pre>{stringifyPretty(settings, 2)}</pre>
     </div>
   )
 }
