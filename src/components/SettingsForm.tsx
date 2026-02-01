@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Settings } from "../core/types";
 import { stringifyPretty } from "../core/format";
 
@@ -6,15 +7,88 @@ type SettingsFormProps = {
   onChange: (settings: Settings) => void;
 };
 
-function parseNumber(input: string): number {
-  const normalized = input.replace(",", ".");
-  const n = Number(normalized);
-  return Number.isFinite(n) ? n : 0;
-}
-
 export default function SettingsForm({ settings, onChange }: SettingsFormProps) {
+  const [startingBalanceInput, setStartingBalanceInput] = useState<string>(
+    String(settings.startingBalance),
+  );
+  const [defaultRiskValueInput, setDefaultRiskValueInput] = useState<string>(
+    String(settings.defaultRiskValue),
+  );
+  const [dailyStopRInput, setDailyStopRInput] = useState<string>(
+    String(settings.dailyStopR),
+  );
+  const [dailyTakeRInput, setDailyTakeRInput] = useState<string>(
+    String(settings.dailyTakeR),
+  );
+
+  useEffect(() => {
+    setStartingBalanceInput(String(settings.startingBalance));
+  }, [settings.startingBalance]);
+
+  useEffect(() => {
+    setDefaultRiskValueInput(String(settings.defaultRiskValue));
+  }, [settings.defaultRiskValue]);
+
+  useEffect(() => {
+    setDailyStopRInput(String(settings.dailyStopR));
+  }, [settings.dailyStopR]);
+
+  useEffect(() => {
+    setDailyTakeRInput(String(settings.dailyTakeR));
+  }, [settings.dailyTakeR]);
+
+  const normalizeDecimal = (value: string): string => value.replace(/,/g, ".");
+
+  const parseDecimal = (value: string, fallback: number): number => {
+    const trimmed = value.trim();
+    if (
+      trimmed === "" ||
+      trimmed === "-" ||
+      trimmed === "." ||
+      trimmed === "-." ||
+      trimmed === "," ||
+      trimmed === "-,"
+    ) {
+      return fallback;
+    }
+    const parsed = Number(normalizeDecimal(trimmed));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
   const update = (partial: Partial<Settings>) => {
     onChange({ ...settings, ...partial });
+  };
+
+  const handleStartingBalance = (raw: string, commit: boolean) => {
+    setStartingBalanceInput(raw);
+    const parsed = parseDecimal(raw, settings.startingBalance);
+    const next = Math.max(0, parsed);
+    update({ startingBalance: next });
+    if (commit) setStartingBalanceInput(String(next));
+  };
+
+  const handleDefaultRiskValue = (raw: string, commit: boolean) => {
+    setDefaultRiskValueInput(raw);
+    const parsed = parseDecimal(raw, settings.defaultRiskValue);
+    const next = Math.max(0, parsed);
+    update({ defaultRiskValue: next });
+    if (commit) setDefaultRiskValueInput(String(next));
+  };
+
+  const handleDailyStopR = (raw: string, commit: boolean) => {
+    setDailyStopRInput(raw);
+    const parsed = parseDecimal(raw, settings.dailyStopR);
+    const next = -Math.abs(parsed);
+    update({ dailyStopR: next });
+    if (commit) setDailyStopRInput(String(next));
+  };
+
+  const handleDailyTakeR = (raw: string, commit: boolean) => {
+    setDailyTakeRInput(raw);
+    const parsed = parseDecimal(raw, settings.dailyTakeR);
+    const next = Math.abs(parsed);
+    update({ dailyTakeR: next });
+    if (commit) setDailyTakeRInput(String(next));
   };
 
   return (
@@ -24,11 +98,11 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
         <label style={{ display: "grid", gap: 6 }}>
           Banca inicial
           <input
-            value={String(settings.startingBalance)}
-            onChange={(e) =>
-              update({ startingBalance: Math.max(0, parseNumber(e.target.value)) })
-            }
+            type="text"
             inputMode="decimal"
+            value={startingBalanceInput}
+            onChange={(e) => handleStartingBalance(e.target.value, false)}
+            onBlur={(e) => handleStartingBalance(e.target.value, true)}
           />
         </label>
 
@@ -57,33 +131,33 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
         <label style={{ display: "grid", gap: 6 }}>
           Valor do risco padrão
           <input
-            value={String(settings.defaultRiskValue)}
-            onChange={(e) =>
-              update({ defaultRiskValue: Math.max(0, parseNumber(e.target.value)) })
-            }
+            type="text"
             inputMode="decimal"
+            value={defaultRiskValueInput}
+            onChange={(e) => handleDefaultRiskValue(e.target.value, false)}
+            onBlur={(e) => handleDefaultRiskValue(e.target.value, true)}
           />
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
           Stop diário (R)
           <input
-            value={String(settings.dailyStopR)}
-            onChange={(e) =>
-              update({ dailyStopR: -Math.abs(parseNumber(e.target.value)) })
-            }
+            type="text"
             inputMode="decimal"
+            value={dailyStopRInput}
+            onChange={(e) => handleDailyStopR(e.target.value, false)}
+            onBlur={(e) => handleDailyStopR(e.target.value, true)}
           />
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
           Take diário (R)
           <input
-            value={String(settings.dailyTakeR)}
-            onChange={(e) =>
-              update({ dailyTakeR: Math.abs(parseNumber(e.target.value)) })
-            }
+            type="text"
             inputMode="decimal"
+            value={dailyTakeRInput}
+            onChange={(e) => handleDailyTakeR(e.target.value, false)}
+            onBlur={(e) => handleDailyTakeR(e.target.value, true)}
           />
         </label>
 
