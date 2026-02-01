@@ -8,7 +8,13 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ProjectionSettings, Settings, Trade } from './core/types'
 import { calculateMetrics, buildLedger } from './core/calc'
 import { project, projectDailySim } from './core/projection'
-import { loadSettings, loadTrades, saveSettings, saveTrades } from './core/storage'
+import {
+  loadSettings,
+  loadTrades,
+  saveSettings,
+  saveTrades,
+  updateTrade,
+} from './core/storage'
 import { summarizeByDay } from './core/daily'
 
 function App() {
@@ -104,6 +110,10 @@ function App() {
     setTrades((prev) => prev.filter((trade) => trade.id !== tradeId))
   }
 
+  const handleUpdateTrade = (tradeId: string, patch: Partial<Trade>) => {
+    setTrades((prev) => updateTrade(prev, tradeId, patch))
+  }
+
   useEffect(() => {
     saveTrades(trades)
   }, [trades])
@@ -157,8 +167,11 @@ function App() {
         <section className="app__panel">
           <TradesTable
             ledger={ledger}
+            trades={visibleTrades}
+            settings={settings}
             currency={settings.currency}
             onDeleteTrade={handleDeleteTrade}
+            onUpdateTrade={handleUpdateTrade}
           />
         </section>
       </main>

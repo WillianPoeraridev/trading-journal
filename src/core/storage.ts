@@ -149,6 +149,18 @@ export function saveTrades(trades: Trade[]): void {
   }
 }
 
+export function updateTrade(
+  trades: Trade[],
+  tradeId: string,
+  patch: Partial<Trade>,
+): Trade[] {
+  const next = trades.map((trade) =>
+    trade.id === tradeId ? { ...trade, ...patch, id: trade.id } : trade,
+  )
+  saveTrades(next)
+  return next
+}
+
 export function resetAll(): void {
   if (!canUseStorage()) return
   try {
