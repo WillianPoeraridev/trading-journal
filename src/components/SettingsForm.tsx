@@ -170,6 +170,21 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
             <option value="ON_PREV_BALANCE">Saldo anterior</option>
           </select>
         </label>
+
+        <label style={{ display: "grid", gap: 6 }}>
+          Método de projeção
+          <select
+            value={settings.projectionMethod}
+            onChange={(e) =>
+              update({
+                projectionMethod: e.target.value as Settings["projectionMethod"],
+              })
+            }
+          >
+            <option value="DETERMINISTIC">Determinística</option>
+            <option value="DAILY_SIM">Diário</option>
+          </select>
+        </label>
       </form>
 
       <details style={{ marginTop: 12 }}>

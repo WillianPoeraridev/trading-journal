@@ -1,6 +1,7 @@
 export type RiskType = "PERCENT" | "FIXED";
 export type ReturnMode = "ON_STARTING_BALANCE" | "ON_PREV_BALANCE";
 export type ResultType = "MONEY" | "R";
+export type ProjectionMethod = "DETERMINISTIC" | "MONTE_CARLO" | "DAILY_SIM";
 
 export type Settings = {
   startingBalance: number;
@@ -13,6 +14,7 @@ export type Settings = {
   dailyTakeR: number; // ex: +2
   maxTradesPerDay: number; // 1 padrão, 2 exceção
   returnMode: ReturnMode;
+  projectionMethod: "DETERMINISTIC" | "DAILY_SIM";
 };
 
 export type Trade = {
@@ -71,14 +73,14 @@ export type Metrics = {
 export type ProjectionSettings = {
   horizonDays: number;
   simulations: number;
-  method: "DETERMINISTIC" | "MONTE_CARLO";
+  method: ProjectionMethod;
 };
 
 export type ProjectionResult = {
-  method: ProjectionSettings["method"];
+  method: ProjectionMethod;
   horizonDays: number;
 
-  deterministicPath?: number[];
+  deterministicPath: number[];
 
   monteCarlo?: {
     p10: number[];

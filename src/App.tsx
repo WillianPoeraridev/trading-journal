@@ -7,7 +7,7 @@ import DailyPanel from './components/DailyPanel'
 import { useEffect, useMemo, useState } from 'react'
 import type { ProjectionSettings, Settings, Trade } from './core/types'
 import { calculateMetrics, buildLedger } from './core/calc'
-import { project } from './core/projection'
+import { project, projectDailySim } from './core/projection'
 import { loadSettings, loadTrades, saveSettings, saveTrades } from './core/storage'
 import { summarizeByDay } from './core/daily'
 
@@ -21,15 +21,24 @@ function App() {
     dailyTakeR: 2,
     maxTradesPerDay: 1,
     returnMode: 'ON_STARTING_BALANCE',
+    projectionMethod: 'DETERMINISTIC',
   }
 
-  const [settings, setSettings] = useState<Settings>(
-    () => loadSettings() ?? defaultSettings,
-  )
+  const [settings, setSettings] = useState<Settings>(() => ({
+    ...defaultSettings,
+    ...(loadSettings() ?? {}),
+  }))
   const [trades, setTrades] = useState<Trade[]>(() => loadTrades())
 
   const ledger = useMemo(() => buildLedger(trades, settings), [trades, settings])
   const daily = useMemo(() => summarizeByDay(ledger, settings), [ledger, settings])
+  const currentBalance = useMemo(
+    () =>
+      ledger.length > 0
+        ? ledger[ledger.length - 1].balanceAfter
+        : settings.startingBalance,
+    [ledger, settings.startingBalance],
+  )
   const metrics = useMemo(
     () => calculateMetrics(trades, ledger, settings),
     [trades, ledger, settings],
@@ -40,10 +49,18 @@ function App() {
     simulations: 1000,
     method: 'DETERMINISTIC',
   }
-  const projection = useMemo(
-    () => project(trades, settings, projectionSettings),
-    [trades, settings],
-  )
+  const projection = useMemo(() => {
+    const method = settings.projectionMethod ?? 'DETERMINISTIC'
+    if (method === 'DAILY_SIM') {
+      return projectDailySim({
+        startBalance: currentBalance,
+        horizonDays: projectionSettings.horizonDays,
+        settings,
+        metrics,
+      })
+    }
+    return project(trades, settings, projectionSettings)
+  }, [trades, settings, projectionSettings.horizonDays, metrics, currentBalance])
 
   const handleSettingsChange = (next: Settings) => {
     setSettings(next)

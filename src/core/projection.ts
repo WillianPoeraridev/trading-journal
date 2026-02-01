@@ -1,4 +1,5 @@
 import type {
+  Metrics,
   ProjectionResult,
   ProjectionSettings,
   Settings,
@@ -178,6 +179,64 @@ export function projectMonteCarlo(
   return { p10, p50, p90 }
 }
 
+export function projectDailySim(args: {
+  startBalance: number
+  horizonDays: number
+  settings: Settings
+  metrics: Metrics
+}): ProjectionResult {
+  const { startBalance, horizonDays, settings, metrics } = args
+  const maxTrades = Math.max(1, settings.maxTradesPerDay)
+  const winProb = Math.max(0, Math.min(1, metrics.winRatePct / 100))
+
+  let balance = roundTo(startBalance, 2)
+  const deterministicPath: number[] = [balance]
+
+  for (let day = 1; day <= horizonDays; day += 1) {
+    let dayR = 0
+
+    for (let t = 0; t < maxTrades; t += 1) {
+      const isWin = Math.random() < winProb
+      let r = isWin ? metrics.avgWinR : metrics.avgLossR
+
+      if (isWin && r <= 0) r = 1
+      if (!isWin && r >= 0) r = -1
+
+      const risk = riskAmount(
+        balance,
+        {
+          riskType: settings.defaultRiskType,
+          riskValue: settings.defaultRiskValue,
+        },
+        settings,
+      )
+      const pnl = r * risk
+      balance = roundTo(balance + pnl, 2)
+      dayR += r
+
+      if (dayR <= settings.dailyStopR || dayR >= settings.dailyTakeR) {
+        break
+      }
+    }
+
+    deterministicPath.push(roundTo(balance, 2))
+  }
+
+  const endBalance = deterministicPath[deterministicPath.length - 1] ?? balance
+
+  return {
+    method: 'DAILY_SIM',
+    horizonDays,
+    deterministicPath,
+    summary: {
+      startBalance: roundTo(startBalance, 2),
+      endBalanceP50: roundTo(endBalance, 2),
+      endBalanceP10: roundTo(endBalance, 2),
+      endBalanceP90: roundTo(endBalance, 2),
+    },
+  }
+}
+
 export function project(
   trades: Trade[],
   settings: Settings,
@@ -219,6 +278,7 @@ export function project(
   return {
     method: projectionSettings.method,
     horizonDays,
+    deterministicPath: monteCarlo.p50,
     monteCarlo,
     summary: {
       startBalance: roundTo(startBalance, 2),
